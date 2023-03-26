@@ -52,6 +52,7 @@ dependencies {
     implementation 'com.tinkerforge:tinkerforge:2.1.31'
     // OpenCV: can be used in final project
     implementation 'org.openpnp:opencv:4.5.1-2'
+    testImplementation 'junit:junit:4.13.1'
 }
 
 test {
