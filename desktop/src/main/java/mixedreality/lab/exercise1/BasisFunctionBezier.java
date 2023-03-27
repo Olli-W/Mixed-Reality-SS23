@@ -4,6 +4,11 @@ import mixedreality.base.math.BasisFunction;
 
 public class BasisFunctionBezier implements BasisFunction {
 
+    /**
+     * Berechnet die Faktultät der übergebenen Zahl.
+     * @param n Die Zahl, deren Fakultät berechnet werden soll.
+     * @return Die Fakultät von n.
+     */
     public int factorial(int n) {
         int result = 1;
         for(int i = n; i > 0; i--) {
@@ -11,11 +16,18 @@ public class BasisFunctionBezier implements BasisFunction {
         }
         return result;
     }
+
+    /**
+     * Berechnet den Binomialkoeffizienten "n über k".
+     * @param n Der "obere" Wert.
+     * @param k Der "untere" Wert
+     * @return Ergebnis von "n über k".
+     */
     public int binomialCoefficient(int n, int k) {
         return factorial(n) / (factorial(k) * factorial(n-k));
     }
     /**
-     * Methode zur Berechnung der Basisfunktionen für Bezier-Kurven.
+     * Methode zur Berechnung der Basisfunktion von Bezier-Kurven.
      * @param t Der Parameterwert, an dem die Kurve betrachtet wird, liegt zwischen 0 und 1.
      * @param index Der Index des Kontrollpunktes.
      * @param degree Der Grad der Kurve.
@@ -27,7 +39,7 @@ public class BasisFunctionBezier implements BasisFunction {
     }
 
     /**
-     * Methode für die Ableitung der Basisfunktionen von Bezier-Kurven.
+     * Methode für die Ableitung der Basisfunktion von Bezier-Kurven.
      * @param t Der Parameterwert, an dem die Kurve betrachtet wird, liegt zwischen 0 und 1.
      * @param i Der Index des Kontrollpunktes.
      * @param degree Der Grad der Kurve.
