@@ -8,6 +8,7 @@ package mixedreality.lab.exercise2;
 
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Vector2f;
+import com.jme3.math.Vector3f;
 import sprites.AnimatedSprite;
 import sprites.Constants;
 import sprites.SpriteAnimationImporter;
@@ -90,6 +91,7 @@ public class Assignment2Scene2D extends Scene2D implements MouseListener {
 
     @Override
     public void paint(Graphics g) {
+        g.clearRect(0, 0, getWidth(), getHeight());
 
         // Draw target
         if (mousePosInScene != null) {
@@ -187,8 +189,25 @@ public class Assignment2Scene2D extends Scene2D implements MouseListener {
      * Compute the walking animation constant for the current avatar rotation.
      */
     protected Constants.WalkAnimations computeAnimationForOrientation() {
-        // TODO
-        return Constants.WalkAnimations.WALK_E;
+        Constants.WalkAnimations walkAnim;
+        var orientation = avatar.getOrientation();
+        int roundedX = Math.round(orientation.x);
+        int roundedY = Math.round(orientation.y);
+        //System.out.println(orientation + "\n(" + roundedX + ", " + roundedY + ")");
+        if (roundedX == 0 && roundedY == 1) { // (0, 1)
+            walkAnim = Constants.WalkAnimations.WALK_N;
+        } else if (roundedX == 1 && roundedY == 0) { // (1, 0)
+            walkAnim = Constants.WalkAnimations.WALK_E;
+        } else if (roundedX == -1 && roundedY == 0) { // (-1, 0)
+            walkAnim = Constants.WalkAnimations.WALK_W;
+        } else if (roundedX == 0 && roundedY == -1) { // (0, -1)
+            walkAnim = Constants.WalkAnimations.WALK_S;
+        } else if ((roundedX == -1 || roundedX == 1) && roundedY == 1) { // catch NE and NW
+            walkAnim = Constants.WalkAnimations.WALK_N;
+        } else { // catch SE and SW
+            walkAnim = Constants.WalkAnimations.WALK_S;
+        }
+        return walkAnim;
     }
 
     /**
@@ -196,6 +215,12 @@ public class Assignment2Scene2D extends Scene2D implements MouseListener {
      * should follow the avatar.
      */
     protected Matrix3f getArrowPose(Avatar avatar, Vector2f spritePos) {
-        return new Matrix3f();
+        Vector2f pointingToAvatar = avatar.getPos().subtract(spritePos);
+        Vector2f perpendicular = new Vector2f(-pointingToAvatar.y, pointingToAvatar.x);
+        return new Matrix3f(
+                pointingToAvatar.x, perpendicular.x, spritePos.x,
+                pointingToAvatar.y, perpendicular.y, spritePos.y,
+                0, 0, 1
+        );
     }
 }

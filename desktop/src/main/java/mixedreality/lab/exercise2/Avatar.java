@@ -11,6 +11,9 @@ import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import math.Vectors;
 
+import math.MathF;
+import math.Angles;
+
 /**
  * Information about the avatar in the game.
  */
@@ -67,14 +70,37 @@ public class Avatar {
      * current rotation and p
      */
     protected Matrix3f makePose() {
-        // TODO
-        return Matrix3f.IDENTITY;
+        Matrix3f rotation = new Matrix3f(
+                MathF.cos(rotationAngle), -MathF.sin(rotationAngle), 0,
+                MathF.sin(rotationAngle), MathF.cos(rotationAngle), 0,
+                0, 0, 1);
+        Matrix3f translation = new Matrix3f(
+                1, 0, pos.x,
+                0, 1, pos.y,
+                0, 0, 1);
+        return translation.mult(rotation);
     }
 
     /**
      * Move the avatar along the current orientation.
      */
     public void moveToTargetPos() {
-        // TODO
+        if (targetPos == null || getPos().subtract(targetPos).length() < 2 * MOVE_VELOCITY) {
+            return;
+        }
+        Vector2f orientation = getOrientation().normalize();
+        Vector2f direction = targetPos.subtract(getPos()).normalize();
+        float alpha = MathF.atan2(
+                orientation.x * direction.y - orientation.y * direction.x,
+                orientation.x * direction.x + orientation.y * direction.y
+        );
+        if (alpha > 0) {
+            rotationAngle += Math.min(alpha, ROTATION_VELOCITY);
+        } else {
+            rotationAngle += Math.max(alpha, -ROTATION_VELOCITY);
+        }
+        if (Math.abs(alpha) <= MathF.HALF_PI){
+            pos = getPos().add(getOrientation().mult(MOVE_VELOCITY));
+        }
     }
 }
