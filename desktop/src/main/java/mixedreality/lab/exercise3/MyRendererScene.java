@@ -6,9 +6,7 @@
 
 package mixedreality.lab.exercise3;
 
-import com.jme3.math.FastMath;
-import com.jme3.math.Vector2f;
-import com.jme3.math.Vector3f;
+import com.jme3.math.*;
 import mixedreality.base.mesh.ObjReader;
 import mixedreality.base.mesh.TriangleMesh;
 import ui.Scene2D;
@@ -18,6 +16,8 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+
+import static mixedreality.base.math.ConvexHull2D.cross;
 
 /**
  * Drawing canvas for a 3D renderer.
@@ -48,8 +48,8 @@ public class MyRendererScene extends Scene2D {
     lastMousePosition = null;
 
     ObjReader reader = new ObjReader();
-    mesh = reader.read("models/cube.obj");
-    //mesh = reader.read("Models/deer.obj");
+    //mesh = reader.read("models/cube.obj");
+    mesh = reader.read("Models/deer.obj");
 
     setupListeners();
   }
@@ -57,10 +57,68 @@ public class MyRendererScene extends Scene2D {
   @Override
   public void paint(Graphics g) {
     Graphics2D g2 = (Graphics2D) g;
+    clear(g2);
 
     if (mesh != null) {
-      // TODO: Draw the mesh here
+      for (int i = 0; i < mesh.getNumberOfTriangles(); i++) {
+        Vector3f pixelCoordinatesA = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getA()).getPosition());
+        Vector3f pixelCoordinatesB = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getB()).getPosition());
+        Vector3f pixelCoordinatesC = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getC()).getPosition());
+        if (backfaceCulling) {
+          if (clockwise(pixelCoordinatesA, pixelCoordinatesB, pixelCoordinatesC)) {
+            drawTriangle(g2, pixelCoordinatesA, pixelCoordinatesB, pixelCoordinatesC);
+          }
+        } else {
+          drawTriangle(g2, pixelCoordinatesA, pixelCoordinatesB, pixelCoordinatesC);
+        }
+      }
     }
+  }
+
+  public Vector3f transformWorld3dToPixel(Vector3f pos) {
+    // Modell-Tranformation
+    Matrix4f M = new Matrix4f();
+
+    // View-Tranformation
+    Vector3f eye = camera.getEye();
+    Vector3f refMinusEye = camera.getRef().subtract(eye);
+    Vector3f z = refMinusEye.divide(refMinusEye.length());
+    Vector3f x = camera.getUp().cross(z);
+    Vector3f y = z.cross(x);
+    Matrix4f V = new Matrix4f(
+            x.x, y.x, z.x, eye.x,
+            x.y, y.y, z.y, eye.y,
+            x.z, y.z, z.z, eye.z,
+            0, 0, 0, 1);
+
+    // Perspektivische Transformation
+    Matrix4f P = new Matrix4f(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 1, 0
+    );
+
+    //Pixel-Transformation
+    float f = (float) (getWidth() / (3 * Math.tan(camera.getFovX() / 2)));
+    Matrix4f K = new Matrix4f(
+            f, 0, 0, getWidth()/2f,
+            0, f, 0, getHeight()/2f,
+            0,0,0,0,
+            0,0,0,0
+    );
+
+    return K.mult(P.mult(V.mult(M.mult(pos))));
+  }
+
+  private boolean clockwise(Vector3f p1, Vector3f p2, Vector3f p3) {
+    return cross(new Vector2f(p1.x, p1.y), new Vector2f(p2.x, p2.y), new Vector2f(p3.x, p3.y)) < 0;
+  }
+
+  private void drawTriangle(Graphics2D g2, Vector3f a, Vector3f b, Vector3f c) {
+    drawLine(g2, new Vector2f(a.x, a.y), new Vector2f(b.x, b.y), g2.getColor());
+    drawLine(g2, new Vector2f(a.x, a.y), new Vector2f(c.x, c.y), g2.getColor());
+    drawLine(g2, new Vector2f(b.x, b.y), new Vector2f(c.x, c.y), g2.getColor());
   }
 
   @Override
