@@ -17,6 +17,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 
+import static java.lang.Math.abs;
 import static mixedreality.base.math.ConvexHull2D.cross;
 
 /**
@@ -96,19 +97,19 @@ public class MyRendererScene extends Scene2D {
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
-            0, 0, 1, 0
+            0, 0, 1/camera.getZ0(), 0
     );
 
     //Pixel-Transformation
-    float f = (float) (getWidth() / (3 * Math.tan(camera.getFovX() / 2)));
+    float f = (float) (getWidth() / (2 * Math.tan(camera.getFovX() / 2)));
     Matrix4f K = new Matrix4f(
             f, 0, 0, getWidth()/2f,
             0, f, 0, getHeight()/2f,
             0,0,0,0,
             0,0,0,0
     );
-
-    return K.mult(P.mult(V.mult(M.mult(pos))));
+    Vector3f pBild = P.mult(V.mult(M.mult(pos)));
+    return K.mult(pBild.divide(abs(pBild.z)));
   }
 
   private boolean clockwise(Vector3f p1, Vector3f p2, Vector3f p3) {
