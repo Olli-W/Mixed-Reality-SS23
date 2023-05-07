@@ -62,9 +62,12 @@ public class MyRendererScene extends Scene2D {
 
     if (mesh != null) {
       for (int i = 0; i < mesh.getNumberOfTriangles(); i++) {
-        Vector3f pixelCoordinatesA = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getA()).getPosition());
-        Vector3f pixelCoordinatesB = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getB()).getPosition());
-        Vector3f pixelCoordinatesC = transformWorld3dToPixel(mesh.getVertex(mesh.getTriangle(i).getC()).getPosition());
+        Vector3f posA = mesh.getVertex(mesh.getTriangle(i).getA()).getPosition();
+        Vector3f posB = mesh.getVertex(mesh.getTriangle(i).getB()).getPosition();
+        Vector3f posC = mesh.getVertex(mesh.getTriangle(i).getC()).getPosition();
+        Vector4f pixelCoordinatesA = transformWorld3dToPixel(new Vector4f(posA.x, posA.y, posA.z, 1));
+        Vector4f pixelCoordinatesB = transformWorld3dToPixel(new Vector4f(posB.x, posB.y, posB.z, 1));
+        Vector4f pixelCoordinatesC = transformWorld3dToPixel(new Vector4f(posC.x, posC.y, posC.z, 1));
         if (backfaceCulling) {
           if (clockwise(pixelCoordinatesA, pixelCoordinatesB, pixelCoordinatesC)) {
             drawTriangle(g2, pixelCoordinatesA, pixelCoordinatesB, pixelCoordinatesC);
@@ -76,7 +79,7 @@ public class MyRendererScene extends Scene2D {
     }
   }
 
-  public Vector3f transformWorld3dToPixel(Vector3f pos) {
+  public Vector4f transformWorld3dToPixel(Vector4f pos) {
     // Modell-Tranformation
     Matrix4f M = new Matrix4f();
 
@@ -90,7 +93,7 @@ public class MyRendererScene extends Scene2D {
             x.x, y.x, z.x, eye.x,
             x.y, y.y, z.y, eye.y,
             x.z, y.z, z.z, eye.z,
-            0, 0, 0, 1);
+            0, 0, 0, 1).invert();
 
     // Perspektivische Transformation
     Matrix4f P = new Matrix4f(
@@ -108,15 +111,15 @@ public class MyRendererScene extends Scene2D {
             0,0,0,0,
             0,0,0,0
     );
-    Vector3f pBild = P.mult(V.mult(M.mult(pos)));
-    return K.mult(pBild.divide(abs(pBild.z)));
+    Vector4f pBild = P.mult(V.mult(M.mult(pos)));
+    return K.mult(pBild.divide(pBild.w));
   }
 
-  private boolean clockwise(Vector3f p1, Vector3f p2, Vector3f p3) {
+  private boolean clockwise(Vector4f p1, Vector4f p2, Vector4f p3) {
     return cross(new Vector2f(p1.x, p1.y), new Vector2f(p2.x, p2.y), new Vector2f(p3.x, p3.y)) < 0;
   }
 
-  private void drawTriangle(Graphics2D g2, Vector3f a, Vector3f b, Vector3f c) {
+  private void drawTriangle(Graphics2D g2, Vector4f a, Vector4f b, Vector4f c) {
     drawLine(g2, new Vector2f(a.x, a.y), new Vector2f(b.x, b.y), g2.getColor());
     drawLine(g2, new Vector2f(a.x, a.y), new Vector2f(c.x, c.y), g2.getColor());
     drawLine(g2, new Vector2f(b.x, b.y), new Vector2f(c.x, c.y), g2.getColor());
