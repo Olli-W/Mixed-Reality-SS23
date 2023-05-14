@@ -61,6 +61,7 @@ public class SimplificationScene extends Scene2D {
 
   @Override
   public void paint(Graphics g) {
+    g.clearRect(0, 0, getWidth(), getHeight());
     Graphics2D g2 = (Graphics2D) g;
     Font oldFont = g2.getFont();
     Font font = new Font("Courier New", oldFont.getStyle(), 9);

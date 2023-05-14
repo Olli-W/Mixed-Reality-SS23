@@ -93,17 +93,29 @@ public class QuadricErrorMetricsSimplification2D {
    * Computes the initial QEM for an edge.
    */
   protected Matrix3f computeDistanceMatrix(PolygonEdge edge) {
+    Vector2f startVertex = edge.getStartVertex().getPosition();
+    Vector2f endVertex = edge.getEndVertex().getPosition();
+    Vector2f edgeVector = endVertex.subtract(startVertex);
+    Vector2f edgeVectorNormal = new Vector2f(edgeVector.y, -edgeVector.x).normalize();
+    Vector3f edgeVectorNormalHomogenous = new Vector3f(edgeVectorNormal.x, edgeVectorNormal.y, -(edgeVectorNormal.dot(startVertex)));
+    Matrix3f result = dyadic(edgeVectorNormalHomogenous, edgeVectorNormalHomogenous);
 
-    // TODO
-
-    return new Matrix3f();
+    /*
+    Bei meinen Tests trat das Problem auf, dass manche Zellen innerhalb einer Matrix den Wert -0 hatten.
+    Dieses Problem wird im Folgenden "auf die Schnelle" gelöst.
+     */
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (result.get(i, j) == -0) {
+          result.set(i, j, 0);
+        }
+      }
+    }
+    return result;
   }
 
   protected Matrix3f computePointQem(PolygonVertex v) {
-
-    // TODO
-
-    return new Matrix3f();
+    return add(computeDistanceMatrix(v.getIncomingEdge()), computeDistanceMatrix(v.getOutgoingEdge()));
   }
 
   /**
@@ -111,11 +123,18 @@ public class QuadricErrorMetricsSimplification2D {
    * collapse.
    */
   protected EdgeCollapse computeEdgeCollapseResult(PolygonEdge edge) {
-
-    // TODO
-
-    Vector2f midPoint = edge.getStartVertex().getPosition().add(edge.getEndVertex().getPosition()).mult(0.5f);
-    return new EdgeCollapse(-1, new Matrix3f(), midPoint);
+    Matrix3f Q = add(computePointQem(edge.getStartVertex()), computePointQem(edge.getEndVertex()));
+    Matrix3f QDerivative = Q.clone().setRow(2, new Vector3f(0, 0, 1));;
+    Matrix3f QDerivativeInverted = QDerivative.invert();
+    Vector3f vNew;
+    if (!QDerivativeInverted.equals(new Matrix3f().zero())) {
+      vNew = QDerivativeInverted.mult(new Vector3f(0, 0, 1));
+    } else {
+      Vector2f midPoint = edge.getStartVertex().getPosition().add(edge.getEndVertex().getPosition()).mult(0.5f);
+      vNew = new Vector3f(midPoint.x, midPoint.y, 1);
+    }
+    float error = vNew.dot(Q.mult(vNew));
+    return new EdgeCollapse(error, Q, convert3to2(vNew));
   }
 
   protected PolygonVertex collapse(PolygonEdge edge, Vector2f newPos) {
