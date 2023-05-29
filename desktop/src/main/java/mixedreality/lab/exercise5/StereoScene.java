@@ -200,8 +200,75 @@ public class StereoScene extends Scene3D {
   public void update(float time) {
   }
 
+  public Vector3f computeGradient(Vector3f currentGuess, double h) {
+    double error = computeError(renderingPipeline(leftCamera, currentGuess), renderingPipeline(rightCamera, currentGuess));
+
+    Vector3f coordsX = new Vector3f(currentGuess.getX() + (float) h, currentGuess.getY(), currentGuess.getZ());
+    double errorX = computeError(renderingPipeline(leftCamera, coordsX), renderingPipeline(rightCamera, coordsX));
+    double gradientX = (errorX - error) / h;
+
+    Vector3f coordsY = new Vector3f(currentGuess.x, currentGuess.y + (float) h, currentGuess.z);
+    double errorY = computeError(renderingPipeline(leftCamera, coordsY), renderingPipeline(rightCamera, coordsY));
+    double gradientY = (errorY - error) / h;
+
+    Vector3f coordsZ = new Vector3f(currentGuess.getX(), currentGuess.getY(), currentGuess.getZ() + (float) h);
+    double errorZ = computeError(renderingPipeline(leftCamera, coordsZ), renderingPipeline(rightCamera, coordsZ));
+    double gradientZ = (errorZ - error) / h;
+
+    return new Vector3f((float) gradientX, (float) gradientY, (float) gradientZ);
+  }
+
+  private Vector2f renderingPipeline(Camera camera, Vector3f projectionCoords) {
+    // Modell-Tranformation
+    Matrix4f M = new Matrix4f();
+
+    // View-Tranformation
+    Matrix4f cameraMatrix = camera.makeCameraMatrix();
+    Matrix4f V = cameraMatrix.invert();
+
+    // Perspektivische Transformation
+    Matrix4f P = new Matrix4f(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 1/camera.getZ0(), 0
+    );
+
+    //Pixel-Transformation
+    float f = (float) (camera.getWidth() / (2 * Math.tan(camera.getFovX() / 2)));
+    Matrix4f K = new Matrix4f(
+            f, 0, 0, camera.getWidth()/2f,
+            0, f, 0, camera.getHeight()/2f,
+            0,0,0,0,
+            0,0,0,0
+    );
+    Vector4f pBild = P.mult(V.mult(M.mult(new Vector4f(projectionCoords.x, projectionCoords.y, projectionCoords.z, 1))));
+    Vector4f toPixel = K.mult(pBild.divide(pBild.w));
+
+    return new Vector2f(toPixel.x, toPixel.y);
+  }
+
+  public double computeError(Vector2f leftScreenCoordsRendered, Vector2f rightScreenCoordsRendered) {
+    return leftScreenCoords.subtract(leftScreenCoordsRendered).length() + rightScreenCoords.subtract(rightScreenCoordsRendered).length();
+  }
+
   @Override
   public void render() {
+    double h = 1e-3;
+    double lambda = 1e-5;
+    double n = 1000;
+
+    Vector3f currentGuess = new Vector3f(0,0,0);
+
+    for(int i = 0; i < n; i++) {
+      Vector3f gradient = computeGradient(currentGuess, h);
+      currentGuess.setX((float) (currentGuess.getX() - lambda * gradient.x));
+      currentGuess.setY((float) (currentGuess.getY() - lambda * gradient.y));
+      currentGuess.setZ((float) (currentGuess.getZ() - lambda * gradient.z));
+    }
+    addPoint(currentGuess, ColorRGBA.Black);
+    addLine(leftCamera.getEye(), currentGuess, ColorRGBA.Black);
+    addLine(rightCamera.getEye(), currentGuess, ColorRGBA.Black);
   }
 
   @Override
