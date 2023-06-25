@@ -12,6 +12,9 @@ import mixedreality.lab.exercise7.functions.ImplicitFunction;
 
 import java.util.Optional;
 
+import static mixedreality.base.mesh.TriangleMeshTools.scale;
+import static mixedreality.base.mesh.TriangleMeshTools.translate;
+
 /**
  * This class creates a triangle mesh for a given implicit function using the Marching Cubes algorithm.
  */
@@ -38,8 +41,27 @@ public class MarchingCubes {
      * Create a mesh for a single cube, given an 8-bit index.
      */
     public Optional<TriangleMesh> getMesh(Index8Bit index, float[] values, float isovalue) {
-        // TODO
-        return Optional.empty();
+        TriangleMesh mesh = new TriangleMesh();
+
+        int[] list = new int[15];
+        for (int i = 0; i < 15; i++) {
+            list[i] = faces[index.toInt() * 15 + i];
+        }
+        if (index.toInt() == 0 || index.toInt() == 255) {
+            return Optional.empty();
+        }
+
+        for (int i = 0; i < list.length; i += 3) {
+            if (list[i] == -1 && list[i + 1] == -1 && list[i + 2] == -1) {
+                continue;
+            }
+            mesh.addTriangle(
+                    mesh.addVertex(getEdgePoint(list[i], values, isovalue)),
+                    mesh.addVertex(getEdgePoint(list[i + 1], values, isovalue)),
+                    mesh.addVertex(getEdgePoint(list[i + 2], values, isovalue))
+            );
+        }
+        return Optional.of(mesh);
     }
 
     /**
@@ -50,9 +72,46 @@ public class MarchingCubes {
     public TriangleMesh makeMesh(ImplicitFunction f, float isovalue,
                                  Vector3f ll, Vector3f ur,
                                  int resX, int resY, int resZ) {
-        // TODO
         TriangleMesh mesh = new TriangleMesh();
+
+        Vector3f cellSideLength = new Vector3f((ur.x - ll.x) / resX, (ur.y - ll.y) / resY, (ur.z - ll.z) / resZ);
+
+        for (int x = 0; x < resX; ++x) {
+            for (int y = 0; y < resY; ++y) {
+                for (int z = 0; z < resZ; ++z) {
+                    Vector3f subCube = new Vector3f(ll.x + (x * cellSideLength.x), ll.y + (y * cellSideLength.y), ll.z + (z * cellSideLength.z));
+                    Vector3f[] corners = new Vector3f[] {
+                            new Vector3f(subCube.x, subCube.y, subCube.z),
+                            new Vector3f(subCube.x + cellSideLength.x, subCube.y, subCube.z),
+                            new Vector3f(subCube.x + cellSideLength.x, subCube.y, subCube.z + cellSideLength.z),
+                            new Vector3f(subCube.x, subCube.y, subCube.z + cellSideLength.z),
+                            new Vector3f(subCube.x, subCube.y + cellSideLength.y, subCube.z),
+                            new Vector3f(subCube.x + cellSideLength.x, subCube.y + cellSideLength.y, subCube.z),
+                            new Vector3f(subCube.x + cellSideLength.x, subCube.y + cellSideLength.y, subCube.z + cellSideLength.z),
+                            new Vector3f(subCube.x, subCube.y + cellSideLength.y, subCube.z + cellSideLength.z),
+                    };
+
+                    float[] values = new float[8];
+                    Index8Bit index = new Index8Bit();
+
+                    for (int i = 0; i < 8; i++) {
+                        values[i] = f.eval(corners[i]);
+                        index.set(i, (short) (values[i] <= isovalue ? 0 : 1));
+                    }
+
+                    Optional<TriangleMesh> triangleMesh = getMesh(index, values, isovalue);
+
+                    if (triangleMesh.isPresent()) {
+                        TriangleMesh currentMesh = triangleMesh.get();
+                        scale(currentMesh, cellSideLength.x);
+                        translate(currentMesh, subCube);
+                        mesh.unite(currentMesh);
+                    }
+                }
+            }
+        }
         mesh.computeTriangleNormals();
+        mesh.flipTriangleOrientation();
         return mesh;
     }
 
